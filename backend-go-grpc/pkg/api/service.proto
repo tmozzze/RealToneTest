@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package api;
+
+service AudioContentDetector {
+    rpc UploadAudio(UploadRequest) returns (UploadResponse);
+    rpc GetStatus(StatusRequest) returns (StatusResponse);
+}
+
+message UploadRequest {
+    bytes audio_file = 1;
+}
+
+message UploadResponse {
+    string message = 1;
+    string task_id = 2;
+}
+
+message StatusRequest {
+    string task_id = 1;
+}
+
+message StatusResponse {
+    string task_id = 1;
+    string status = 2;
+    float probability = 3;
+}
