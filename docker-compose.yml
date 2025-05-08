@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  go_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go_auth_service
+    restart: unless-stopped
+    env_file:
+      - .env # Load environment variables from .env file
+    environment: # Explicitly set DB_HOST
+      DB_HOST: postgres_db 
+    ports:
+      - "${GO_APP_PORT:-8080}:${GO_APP_PORT:-8080}" # Use variable from .env or default to 8080
+    depends_on:
+      - postgres_db
+    networks:
+      - app_network
+
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: postgres_db_auth
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT:-5432}:5432" # Use variable from .env or default to 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # You can add a script to initialize the DB schema here if needed
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app_network
+
+volumes:
+  postgres_data: # Persists data even if the container is removed
+
+networks:
+  app_network:
+    driver: bridge 
