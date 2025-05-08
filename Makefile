@@ -75,5 +75,9 @@ get-deps:
 	@go get github.com/golang-jwt/jwt/v5
 	@go get github.com/joho/godotenv
 	@go get go.uber.org/zap
+	@go get github.com/aws/aws-sdk-go-v2/config
+	@go get github.com/aws/aws-sdk-go-v2/service/s3
+	@go get github.com/aws/aws-sdk-go-v2/credentials
+	@go get github.com/aws/aws-sdk-go-v2
 	@echo "Tidying dependencies..."
 	@go mod tidy 

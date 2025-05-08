@@ -8,6 +8,8 @@ import (
 	"example.com/auth_service/internal/config"
 	"example.com/auth_service/internal/database"
 	"example.com/auth_service/internal/handlers"
+	"example.com/auth_service/internal/middleware"
+	"example.com/auth_service/internal/s3service" // Add S3 service import
 	"example.com/auth_service/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -42,20 +44,26 @@ func main() {
 	defer db.Close()
 	appLogger.Info("Database connection successful")
 
+	// Initialize S3 Service
+	s3Svc, err := s3service.NewS3Service(cfg.S3, appLogger)
+	if err != nil {
+		appLogger.Fatal("Failed to initialize S3 service", zap.Error(err))
+	}
+
 	// Initialize Gin router
 	// gin.SetMode(gin.ReleaseMode) // Uncomment for production
 	router := gin.Default()
 	// router.Use(gin.Recovery()) // gin.Default() already includes Recovery and Logger middleware
 
 	// Setup dependencies
-	userRepo := database.NewUserRepository(db /*, appLogger*/) // Pass logger if UserRepository expects it
+	userRepo := database.NewUserRepository(db, appLogger)
+	audioRepo := database.NewAudioRepository(db, appLogger)
 
 	// Pass userRepo to AuthService
 	authSvc := auth.NewAuthService(cfg.JWT.SecretKey, cfg.JWT.ExpirationHours, userRepo)
 
-	// Pass appLogger to handlers and middleware if they expect a logger instance directly
-	// For now, handlers and middleware have commented out logger usage or use local logging
-	userHandler := handlers.NewUserHandler(authSvc, userRepo /*, appLogger*/)
+	userHandler := handlers.NewUserHandler(authSvc, userRepo, appLogger)
+	audioHandler := handlers.NewAudioHandler(s3Svc, audioRepo, appLogger)
 
 	// Setup routes
 	apiV1 := router.Group("/api/v1")
@@ -66,25 +74,16 @@ func main() {
 			userRoutes.POST("/login", userHandler.LoginUser)
 		}
 
+		// Audio routes (protected)
+		authMW := middleware.AuthMiddleware(authSvc, appLogger)
+		audioRoutes := apiV1.Group("/audio")
+		audioRoutes.Use(authMW) // Apply auth middleware to all /audio routes
+		{
+			audioRoutes.POST("/upload", audioHandler.UploadAudioFile)
+		}
+
 		// Example of a protected route (requires JWT)
-		// Ensure AuthMiddleware is initialized with authSvc and potentially appLogger
-		// authMW := middleware.AuthMiddleware(authSvc /*, appLogger*/)
 		// protectedRoutes := apiV1.Group("/protected")
-		// protectedRoutes.Use(authMW)
-		// {
-		// 	protectedRoutes.GET("/me", func(c *gin.Context) {
-		// 		claims, exists := middleware.GetCurrentUserClaims(c)
-		// 		if !exists {
-		// 			c.JSON(http.StatusUnauthorized, gin.H{"error": "User claims not found"})
-		// 			return
-		// 		}
-		// 		c.JSON(http.StatusOK, gin.H{
-		// 			"message": "This is protected data for user",
-		// 			"user_id": claims.UserID,
-		// 			"email":   claims.Email,
-		// 		})
-		// 	})
-		// }
 	}
 
 	router.GET("/ping", func(c *gin.Context) {

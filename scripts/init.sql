@@ -29,4 +29,18 @@ EXECUTE FUNCTION update_updated_at_column();
 
 -- You can add more tables or initial data here if needed.
 -- Example: Admin user (ensure to hash the password correctly if adding directly)
--- INSERT INTO users (username, email, password_hash) VALUES ('admin', 'admin@example.com', 'hashed_admin_password'); 
+-- INSERT INTO users (username, email, password_hash) VALUES ('admin', 'admin@example.com', 'hashed_admin_password');
+
+-- Create audio_files table
+CREATE TABLE IF NOT EXISTS audio_files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Using UUID for id as well for consistency, or SERIAL if preferred
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- Must match users.id type
+    s3_key VARCHAR(512) NOT NULL UNIQUE, -- s3_key should be sufficiently long and unique
+    original_filename VARCHAR(255) NOT NULL, -- Store the original filename
+    content_type VARCHAR(100), -- Store MIME type
+    size_bytes BIGINT, -- Store file size
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_audio_files_user_id ON audio_files(user_id);
+CREATE INDEX IF NOT EXISTS idx_audio_files_s3_key ON audio_files(s3_key); 

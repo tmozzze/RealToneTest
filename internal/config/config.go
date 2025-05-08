@@ -14,8 +14,9 @@ type Config struct {
 	AppPort   string
 	Database  DatabaseConfig // Renamed from internal/database.DBConfig to avoid import cycle if that was moved here
 	JWT       JWTConfig
-	LogLevel  string // e.g., "debug", "info", "warn", "error"
-	LogFormat string // e.g., "json", "console"
+	LogLevel  string   // e.g., "debug", "info", "warn", "error"
+	LogFormat string   // e.g., "json", "console"
+	S3        S3Config // New S3 config section
 }
 
 // DatabaseConfig holds database connection parameters.
@@ -35,6 +36,16 @@ type DatabaseConfig struct {
 type JWTConfig struct {
 	SecretKey       string
 	ExpirationHours int
+}
+
+// S3Config holds S3/MinIO client configuration.
+type S3Config struct {
+	Endpoint        string
+	AccessKeyID     string
+	SecretAccessKey string
+	BucketName      string
+	Region          string
+	UsePathStyle    bool // For MinIO, this is often true
 }
 
 // Load loads configuration from environment variables.
@@ -64,6 +75,18 @@ func Load() (*Config, error) {
 	logLevel := getEnv("LOG_LEVEL", "info")
 	logFormat := getEnv("LOG_FORMAT", "console") // "json" or "console"
 
+	// S3/MinIO Config
+	s3Endpoint := getEnv("S3_ENDPOINT", "http://localhost:9000")
+	s3AccessKeyID := getEnv("S3_ACCESS_KEY_ID", "")
+	s3SecretAccessKey := getEnv("S3_SECRET_ACCESS_KEY", "")
+	s3BucketName := getEnv("S3_BUCKET_NAME", "default-bucket")
+	s3Region := getEnv("S3_REGION", "us-east-1")
+	s3UsePathStyleStr := getEnv("S3_USE_PATH_STYLE", "false")
+	s3UsePathStyle, err := strconv.ParseBool(s3UsePathStyleStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid S3_USE_PATH_STYLE value: %s, error: %w", s3UsePathStyleStr, err)
+	}
+
 	return &Config{
 		AppPort: appPort,
 		Database: DatabaseConfig{
@@ -80,6 +103,14 @@ func Load() (*Config, error) {
 		},
 		LogLevel:  logLevel,
 		LogFormat: logFormat,
+		S3: S3Config{
+			Endpoint:        s3Endpoint,
+			AccessKeyID:     s3AccessKeyID,
+			SecretAccessKey: s3SecretAccessKey,
+			BucketName:      s3BucketName,
+			Region:          s3Region,
+			UsePathStyle:    s3UsePathStyle,
+		},
 	}, nil
 }
 
