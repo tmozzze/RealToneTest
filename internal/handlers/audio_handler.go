@@ -23,6 +23,13 @@ const (
 	fileFormField = "audiofile"      // Name of the form field for the file
 )
 
+// Allowed audio file extensions (case-insensitive)
+var allowedAudioExtensions = map[string]bool{
+	".wav": true,
+	".mp3": true,
+	".ogg": true,
+}
+
 // AudioHandler handles HTTP requests related to audio files.
 type AudioHandler struct {
 	s3Service *s3service.S3Service
@@ -79,6 +86,15 @@ func (h *AudioHandler) UploadAudioFile(c *gin.Context) {
 		originalFilename = "uploaded_file"
 	}
 
+	// ---> Start File Extension Validation <---
+	ext := strings.ToLower(filepath.Ext(originalFilename))
+	if !allowedAudioExtensions[ext] {
+		h.logger.Warn("UploadAudioFile: Invalid file extension", zap.String("filename", header.Filename), zap.String("extension", ext))
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid file format. Allowed formats: %v", getAllowedExtensionsList())})
+		return
+	}
+	// ---> End File Extension Validation <---
+
 	// Determine content type (MIME type)
 	// The header.Header.Get("Content-Type") might be provided by the client,
 	// but it's better to detect it from the file content if possible, or validate it.
@@ -90,9 +106,8 @@ func (h *AudioHandler) UploadAudioFile(c *gin.Context) {
 
 	// 3. Generate S3 Key
 	// Example: user_id/timestamp_nanoseconds/sanitized_filename.extension
-	ext := filepath.Ext(originalFilename)
-	baseFilename := strings.TrimSuffix(originalFilename, ext)
-	safeBaseFilename := strings.ReplaceAll(strings.ToLower(baseFilename), " ", "_") // Basic sanitization
+	baseFilename := strings.TrimSuffix(originalFilename, filepath.Ext(originalFilename)) // Use original extension for removing suffix
+	safeBaseFilename := strings.ReplaceAll(strings.ToLower(baseFilename), " ", "_")      // Basic sanitization
 	s3Key := fmt.Sprintf("%s/%d/%s%s", userID.String(), time.Now().UnixNano(), safeBaseFilename, ext)
 
 	h.logger.Info("Attempting to upload to S3", zap.String("s3_key", s3Key), zap.String("content_type", contentType)) // Use logger
@@ -137,4 +152,13 @@ func (h *AudioHandler) UploadAudioFile(c *gin.Context) {
 		Message: "Audio file uploaded successfully",
 		FileURL: fileURL, // This URL might be empty if S3 endpoint resolution failed in s3service
 	})
+}
+
+// Helper function to get list of allowed extensions for error message
+func getAllowedExtensionsList() []string {
+	extensions := make([]string, 0, len(allowedAudioExtensions))
+	for ext := range allowedAudioExtensions {
+		extensions = append(extensions, ext)
+	}
+	return extensions
 }
