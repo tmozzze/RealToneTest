@@ -49,7 +49,7 @@ export function RegisterForm() {
 
     try {
       const response = await registerUser(userData)
-      setSuccessMessage(`${response.message}. User ID: ${response.user_id}. Вы будете перенаправлены на страницу входа.`)
+      setSuccessMessage("Регистрация прошла успешна. Вы будете перенаправлены на страницу входа.")
       setTimeout(() => {
         router.push("/auth/login")
       }, 3000)

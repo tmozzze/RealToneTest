@@ -19,7 +19,8 @@ export function AuthCheck({ children }: AuthCheckProps) {
     const token = localStorage.getItem("jwt_token")
     const isLoggedIn = !!token // Если токен есть, считаем, что пользователь вошел
 
-    const publicRoutes = ["/auth/login", "/auth/register", "/about", "/how-it-works", "/contacts"]
+    // Добавляем главную страницу '/' в список публичных маршрутов
+    const publicRoutes = ["/", "/auth/login", "/auth/register", "/about", "/how-it-works", "/contacts"]
     const isPublicRoute = publicRoutes.includes(pathname)
 
     if (!isLoggedIn && !isPublicRoute) {
@@ -34,7 +35,11 @@ export function AuthCheck({ children }: AuthCheckProps) {
       const updatedToken = localStorage.getItem("jwt_token")
       const updatedIsLoggedIn = !!updatedToken
 
-      if (!updatedIsLoggedIn && !isPublicRoute) {
+      // Обновляем isPublicRoute с учетом текущего pathname, если он мог измениться
+      // (хотя pathname из usePathname должен быть актуальным в области видимости useEffect)
+      const currentIsPublicRoute = publicRoutes.includes(pathname)
+
+      if (!updatedIsLoggedIn && !currentIsPublicRoute) {
         // Если пользователь вышел и находится не на публичном маршруте, перенаправляем на логин
         router.push("/auth/login")
       } else if (updatedIsLoggedIn && (pathname === "/auth/login" || pathname === "/auth/register")) {

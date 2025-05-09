@@ -273,7 +273,7 @@ export function UploadForm() {
                   <p className="mb-2 text-sm font-medium text-[#6a50d3]">
                     <span className="font-semibold">Upload audio file</span>
                   </p>
-                  <p className="text-xs text-gray-500">.mp3, .wav, etc.</p>
+                  <p className="text-xs text-gray-500">.mp3, .wav, .ogg</p>
                 </div>
                 <input id="audio-upload" type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />
               </label>
