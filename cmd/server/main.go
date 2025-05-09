@@ -12,6 +12,7 @@ import (
 	"example.com/auth_service/internal/s3service" // Add S3 service import
 	"example.com/auth_service/pkg/logger"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap" // For logger error handling
 )
@@ -54,6 +55,15 @@ func main() {
 	// gin.SetMode(gin.ReleaseMode) // Uncomment for production
 	router := gin.Default()
 	// router.Use(gin.Recovery()) // gin.Default() already includes Recovery and Logger middleware
+
+	// Setup CORS middleware
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{"http://localhost:3000"} // URL вашего фронтенда
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	// Если вы планируете использовать cookies или аутентификацию через заголовки, которые должны быть доступны JS
+	// corsConfig.AllowCredentials = true
+	router.Use(cors.New(corsConfig)) // Применение middleware
 
 	// Setup dependencies
 	userRepo := database.NewUserRepository(db, appLogger)
